@@ -1,15 +1,15 @@
 package com.brian.marvel.controller
 
-import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import com.brian.marvel.endpoints.GetCharactersEndpoint
-import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
+import com.brian.marvel.utils.Controller
 
-class CharacterController(getCharactersEndpoint: GetCharactersEndpoint) extends PlayJsonSupport {
+class CharacterController(getCharactersEndpoint: GetCharactersEndpoint) extends Controller {
 
   lazy val route: Route = pathPrefix("characters") {
     pathEnd {
-      complete(getCharactersEndpoint.getCharacters)
+      completion(getCharactersEndpoint.getCharacters)
     }
   }
 }

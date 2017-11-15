@@ -1,9 +1,12 @@
 package com.brian.marvel.utils
 
 import akka.http.scaladsl.model.HttpResponse
+import akka.http.scaladsl.model.StatusCodes.{ClientError, ServerError}
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
-import com.brian.marvel.domain.ErrorObj
+import com.brian.marvel.domain.{ErrorBase, ErrorObj, ServiceError}
+import com.brian.marvel.service.ErrorConstants
+import com.brian.marvel.utils.ResponseHandler.ResponseType
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 
 import scala.concurrent.Future
@@ -11,12 +14,40 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 trait ResponseHandler extends PlayJsonSupport {
 
-  implicit class unmarshalResponse(resp: Future[HttpResponse]) {
-    def as[T](implicit um: Unmarshaller[HttpResponse, T], mat: Materializer): Future[Either[ErrorObj, T]] =
-      resp.flatMap {
-        case r: HttpResponse if r.status.isSuccess() => Unmarshal(r).to[T].map(Right(_))
-        case r: HttpResponse => Unmarshal(r).to[ErrorObj].map(Left(_))
+  implicit class UnmarshalResponse(resp: Future[HttpResponse]) {
+    def as[T](implicit um: Unmarshaller[HttpResponse, T], mat: Materializer): ResponseType[T] = {
+      val res = resp.flatMap {
+        case r: HttpResponse if r.status.isSuccess() => {
+          println(r.entity)
+          Unmarshal(r).to[T].map(Right(_))
+        }
+        case r: HttpResponse => {
+          println(r.entity)
+          defaultErrorHandler[T].apply(r)
+        }
       }
+
+      res.failed map {
+        case _: Throwable => Left(ErrorConstants.ServiceError)
+      }
+
+      res
+    }
   }
+
+  private def defaultErrorHandler[T](implicit um: Unmarshaller[HttpResponse, T], mat: Materializer): PartialFunction[HttpResponse, ResponseType[T]] = errorHandler orElse {
+    case resp: HttpResponse => resp.status match {
+      case ClientError(_) => Unmarshal(resp).to[ErrorObj].map(err => Left(ServiceError(err.code, err.message, resp.status.intValue())))
+      case _ => Future {
+        Left(ErrorConstants.ServiceError)
+      }
+    }
+  }
+
+  protected def errorHandler[T](implicit um: Unmarshaller[HttpResponse, T], mat: Materializer): PartialFunction[HttpResponse, ResponseType[T]] = PartialFunction.empty[HttpResponse, ResponseType[T]]
+}
+
+object ResponseHandler {
+  type ResponseType[T] = Future[Either[ErrorBase, T]]
 
 }
