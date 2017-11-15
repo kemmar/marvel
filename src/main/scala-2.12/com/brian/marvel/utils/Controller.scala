@@ -1,6 +1,6 @@
 package com.brian.marvel.utils
 
-import akka.http.scaladsl.marshalling.ToResponseMarshaller
+import akka.http.scaladsl.marshalling.{ToEntityMarshaller, ToResponseMarshaller}
 import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.StandardRoute
@@ -14,15 +14,15 @@ import scala.concurrent.duration.{Duration, _}
 
 trait Controller extends PlayJsonSupport {
 
-  def completion[T: ToResponseMarshaller](resp: => ResponseType[T], statusCode: StatusCode = StatusCodes.OK): StandardRoute = {
+  def completion[T: ToResponseMarshaller](resp: => ResponseType[T], statusCode: StatusCode = StatusCodes.OK)(implicit mt: ToEntityMarshaller[T]): StandardRoute = {
     val comp = resp.map {
-        case Right(v) => complete(v)
-        case Left(serviceError: ServiceError) =>
-          complete((StatusCode.int2StatusCode(serviceError.statusCode), serviceError.toStandardError))
-        case Left(error) => complete(error)
+      case Right(v) => complete((statusCode, v))
+      case Left(serviceError: ServiceError) =>
+        complete((StatusCode.int2StatusCode(serviceError.statusCode), serviceError.toStandardError))
+      case Left(error) => complete((StatusCodes.UnprocessableEntity, error))
     }
 
-    Await.result(comp , Duration(10, SECONDS))
+    Await.result(comp, Duration(10, SECONDS))
   }
 
 }
