@@ -1,6 +1,8 @@
 package com.brian.marvel.utils
 
-import akka.http.scaladsl.model.HttpResponse
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.model.StatusCodes.{ClientError, ServerError}
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
@@ -13,6 +15,14 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 trait ResponseHandler extends PlayJsonSupport {
+
+  def sendLoggedRequest(req: HttpRequest)(implicit as: ActorSystem, mat: Materializer): Future[HttpResponse] = {
+    println(req)
+    Http().singleRequest(req).map { resp =>
+      println(resp)
+      resp
+    }
+  }
 
   implicit class UnmarshalResponse(resp: Future[HttpResponse]) {
     def as[T](implicit um: Unmarshaller[HttpResponse, T], mat: Materializer): ResponseType[T] = {

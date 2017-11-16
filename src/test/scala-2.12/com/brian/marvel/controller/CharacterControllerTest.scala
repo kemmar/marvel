@@ -17,7 +17,15 @@ class CharacterControllerTest extends TestCommons {
 
     Get("/characters") ~> routes ~> check {
       status shouldBe StatusCodes.OK
-      responseAs[JsValue] shouldEqual arr("1011334", "1017100", "1009144", "1010699", "1009146")
+      responseAs[JsValue] shouldEqual arr(1011334, 1017100, 1009144, 1010699, 1009146)
+    }
+  }
+
+  it should "return a list of charecter infermation" in {
+    MarvelStubs.returnSuccessfulCharacters
+
+    Get("/characters/1011334") ~> routes ~> check {
+      status shouldBe StatusCodes.OK
     }
   }
 

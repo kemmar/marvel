@@ -6,7 +6,7 @@ object MarvelStubs extends MockServer(port = 8090, securePort = Some(8490)) {
 
   def returnSuccessfulCharacters = {
     switchToMe()
-    stubFor(get(urlEqualTo("/v1/public/characters"))
+    stubFor(get(urlPathEqualTo("/v1/public/characters"))
       .willReturn(aResponse()
         .withStatus(200)
         .withHeader("Content-Type", "application/json")
@@ -15,7 +15,7 @@ object MarvelStubs extends MockServer(port = 8090, securePort = Some(8490)) {
 
   def failWithError(code: String, message: String, statusCode: Int = 400) = {
     switchToMe()
-    stubFor(get(urlEqualTo("/v1/public/characters"))
+    stubFor(get(urlPathEqualTo("/v1/public/characters"))
       .willReturn(aResponse()
         .withStatus(statusCode)
         .withHeader("Content-Type", "application/json")

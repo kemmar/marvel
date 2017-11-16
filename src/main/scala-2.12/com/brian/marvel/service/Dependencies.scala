@@ -3,8 +3,8 @@ package com.brian.marvel.service
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.brian.marvel.controller.CharacterController
-import com.brian.marvel.endpoints.GetCharactersEndpoint
-import com.typesafe.config.{Config, ConfigFactory}
+import com.brian.marvel.endpoints.{GetCharacterEndpoint, GetCharactersEndpoint}
+import com.typesafe.config.ConfigFactory
 
 trait Dependencies {
 
@@ -13,7 +13,9 @@ trait Dependencies {
   implicit val materializer: ActorMaterializer
 
   lazy val getCharactersEndpoint = new GetCharactersEndpoint()
-  lazy val characterController = new CharacterController(getCharactersEndpoint)
+  lazy val getCharacterEndpoint = new GetCharacterEndpoint()
+
+  lazy val characterController = new CharacterController(getCharactersEndpoint, getCharacterEndpoint)
 
 
   lazy val routes = characterController.route

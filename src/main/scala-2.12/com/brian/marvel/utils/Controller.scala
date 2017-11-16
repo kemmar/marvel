@@ -21,8 +21,8 @@ trait Controller extends PlayJsonSupport {
         complete((StatusCode.int2StatusCode(serviceError.statusCode), serviceError.toStandardError))
       case Left(error) => complete((StatusCodes.UnprocessableEntity, error))
     }
-
-    Await.result(comp, Duration(10, SECONDS))
+    //todo: extract timeout
+    Await.result(comp, Duration(60, SECONDS))
   }
 
 }
