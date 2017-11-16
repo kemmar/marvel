@@ -13,6 +13,15 @@ object MarvelStubs extends MockServer(port = 8090, securePort = Some(8490)) {
         .withBodyFile("/stubs/exampleResponse.json")))
   }
 
+  def returnSuccessfulCharacter(charId: String) = {
+    switchToMe()
+    stubFor(get(urlPathEqualTo(s"/v1/public/characters/$charId"))
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withHeader("Content-Type", "application/json")
+        .withBodyFile("/stubs/exampleCharacterResponse.json")))
+  }
+
   def failWithError(code: String, message: String, statusCode: Int = 400) = {
     switchToMe()
     stubFor(get(urlPathEqualTo("/v1/public/characters"))

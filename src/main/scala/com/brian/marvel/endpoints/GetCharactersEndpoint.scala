@@ -1,25 +1,23 @@
 package com.brian.marvel.endpoints
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, Uri}
 import akka.stream.Materializer
-import com.brian.marvel.domain.{CharacterResponse, ErrorBase, MarvelCharacter, ServiceError}
+import com.brian.marvel.domain.{CharacterResponse, ErrorBase, MarvelCharacter}
+import com.brian.marvel.utils.ResponseHandler._
 import com.brian.marvel.utils.{Authenticator, ResponseHandler}
-import com.brian.marvel.utils.ResponseHandler.ResponseType
 import com.typesafe.config.Config
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class GetCharactersEndpoint(implicit as: ActorSystem, mat: Materializer, conf: Config) extends ResponseHandler {
 
-  val path = "/v1/public/characters"
-  val url: Uri = conf.getString("marvel.url") + path
-  val (stamp, hash) = Authenticator.makeHash("marvel")
+  lazy val path = "/v1/public/characters"
+  lazy val url: Uri = conf.getString("marvel.url") + path
+  lazy val (stamp, hash) = Authenticator.makeHash("marvel")
 
-  val limit = 100
-  val apiKey = conf.getString("marvel.apiKey")
+  lazy val limit = 100
+  lazy val apiKey = conf.getString("marvel.apiKey")
 
   def getCharacters: ResponseType[Seq[Int]] = {
 
@@ -28,7 +26,7 @@ class GetCharactersEndpoint(implicit as: ActorSystem, mat: Materializer, conf: C
         HttpRequest(uri =
           url.withRawQueryString(s"limit=$limit&offset=$offset&apikey=$apiKey&hash=$hash&ts=$stamp"))
 
-      def task(last: Either[ErrorBase, CharacterResponse]): Future[Either[ErrorBase, CharacterResponse]] = for {
+      def task(last: Either[ErrorBase, CharacterResponse]): ResponseType[CharacterResponse] = for {
         next <- buildCharacterList(offset + limit, last.toOption.map(_.total))
       } yield for {
         l <- last
@@ -39,9 +37,7 @@ class GetCharactersEndpoint(implicit as: ActorSystem, mat: Materializer, conf: C
         sendLoggedRequest(req).as[CharacterResponse].flatMap { response =>
           if (response.isRight) {
             task(response)
-          } else Future {
-            response
-          }
+          } else response
         }
       }
 
@@ -50,9 +46,7 @@ class GetCharactersEndpoint(implicit as: ActorSystem, mat: Materializer, conf: C
           if ((offset + limit) <= total) {
             makeCall
           }
-          else Future {
-            Right(CharacterResponse(offset + limit, total, Seq.empty[MarvelCharacter]))
-          }
+          else Right(CharacterResponse(offset + limit, total, Seq.empty[MarvelCharacter]))
         }
         case None => {
           makeCall

@@ -4,6 +4,8 @@ version := "1.0"
 
 scalaVersion := "2.12.4"
 
+mainClass in run := Some("com.brian.marvel.Application")
+
 libraryDependencies ++= Seq(
   "com.github.swagger-akka-http" % "swagger-akka-http_2.12" % "0.11.0",
   "com.github.tomakehurst" % "wiremock" % "2.6.0" % Test,

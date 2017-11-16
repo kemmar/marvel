@@ -2,17 +2,17 @@ package com.brian.marvel.utils
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.StatusCodes.ClientError
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
-import akka.http.scaladsl.model.StatusCodes.{ClientError, ServerError}
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import com.brian.marvel.domain.{ErrorBase, ErrorObj, ServiceError}
 import com.brian.marvel.service.ErrorConstants
-import com.brian.marvel.utils.ResponseHandler.ResponseType
+import com.brian.marvel.utils.ResponseHandler._
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 trait ResponseHandler extends PlayJsonSupport {
 
@@ -48,9 +48,7 @@ trait ResponseHandler extends PlayJsonSupport {
   private def defaultErrorHandler[T](implicit um: Unmarshaller[HttpResponse, T], mat: Materializer): PartialFunction[HttpResponse, ResponseType[T]] = errorHandler orElse {
     case resp: HttpResponse => resp.status match {
       case ClientError(_) => Unmarshal(resp).to[ErrorObj].map(err => Left(ServiceError(err.code, err.message, resp.status.intValue())))
-      case _ => Future {
-        Left(ErrorConstants.ServiceError)
-      }
+      case _ => Left(ErrorConstants.ServiceError)
     }
   }
 
@@ -59,5 +57,7 @@ trait ResponseHandler extends PlayJsonSupport {
 
 object ResponseHandler {
   type ResponseType[T] = Future[Either[ErrorBase, T]]
+
+  implicit def eitherToResponseType[T](value: Either[ErrorBase, T]): ResponseType[T] = Future { value }
 
 }

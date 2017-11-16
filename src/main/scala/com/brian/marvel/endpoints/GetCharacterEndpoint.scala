@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, Uri}
 import akka.stream.Materializer
-import com.brian.marvel.domain.{CharacterResponse, ErrorBase, MarvelCharacter}
+import com.brian.marvel.domain.{CharacterResponse, ErrorBase, MarvelCharacter, ServiceError}
 import com.brian.marvel.utils.ResponseHandler.ResponseType
 import com.brian.marvel.utils.{Authenticator, ResponseHandler}
 import com.typesafe.config.Config
@@ -14,9 +14,9 @@ import scala.concurrent.Future
 
 class GetCharacterEndpoint(implicit as: ActorSystem, mat: Materializer, conf: Config) extends ResponseHandler {
 
-  val (stamp, hash) = Authenticator.makeHash("marvel")
+  lazy val (stamp, hash) = Authenticator.makeHash("marvel")
 
-  val apiKey = conf.getString("marvel.apiKey")
+  lazy val apiKey = conf.getString("marvel.apiKey")
 
   def getCharacter(id: String): ResponseType[MarvelCharacter] = {
 
@@ -24,7 +24,12 @@ class GetCharacterEndpoint(implicit as: ActorSystem, mat: Materializer, conf: Co
     val url: Uri = conf.getString("marvel.url") + path
     val req = HttpRequest(uri = url.withRawQueryString(s"apikey=$apiKey&hash=$hash&ts=$stamp"))
 
-    sendLoggedRequest(req).as[CharacterResponse].map(_.map(_.characters.head))
+    sendLoggedRequest(req).as[CharacterResponse].map {
+      case Right(s) if s.characters.size > 1 =>  Left(ServiceError("popular.character", "too many responses"))
+      case Right(s) if s.characters.isEmpty =>  Left(ServiceError("unpopular.character", "too few responses"))
+      case Right(s) =>  Right(s.characters.head)
+      case Left(e) => Left(e)
+    }
   }
 
 }
