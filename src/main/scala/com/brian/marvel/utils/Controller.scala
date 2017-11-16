@@ -15,7 +15,7 @@ import scala.concurrent.duration.{Duration, _}
 trait Controller extends PlayJsonSupport {
 
   def completion[T: ToResponseMarshaller](resp: => ResponseType[T], statusCode: StatusCode = StatusCodes.OK)(implicit mt: ToEntityMarshaller[T]): StandardRoute = {
-    val comp = resp.map {
+    val comp = resp.value.map {
       case Right(Some(rd: RedirectResponse)) => redirect(rd.url, StatusCodes.Found)
       case Right(v) => complete((statusCode, v))
       case Left(serviceError: ServiceError) =>

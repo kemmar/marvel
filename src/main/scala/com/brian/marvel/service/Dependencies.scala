@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import com.brian.marvel.controller.CharacterController
-import com.brian.marvel.endpoints.{GetCharacterEndpoint, GetCharactersEndpoint}
+import com.brian.marvel.endpoints.{GetCharacterEndpoint, GetCharactersEndpoint, GetPowersEndpoint}
 import com.brian.marvel.utils.RejectionHandlerTrait
 import com.typesafe.config.ConfigFactory
 
@@ -16,9 +16,9 @@ trait Dependencies extends RejectionHandlerTrait {
 
   lazy val getCharactersEndpoint = new GetCharactersEndpoint()
   lazy val getCharacterEndpoint = new GetCharacterEndpoint()
+  lazy val getPowersEndpoint = new GetPowersEndpoint()
 
-  lazy val characterController = new CharacterController(getCharactersEndpoint, getCharacterEndpoint)
-
+  lazy val characterController = new CharacterController(getCharactersEndpoint, getCharacterEndpoint, getPowersEndpoint)
 
   lazy val routes = handleRejections(myRejectionHandler) {
     characterController.route

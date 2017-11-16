@@ -3,7 +3,8 @@ package com.brian.marvel.endpoints
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{HttpRequest, Uri}
 import akka.stream.Materializer
-import com.brian.marvel.domain.{CharacterResponse, ErrorBase, MarvelCharacter}
+import cats.implicits._
+import com.brian.marvel.domain.{CharacterResponse, MarvelCharacter}
 import com.brian.marvel.utils.ResponseHandler._
 import com.brian.marvel.utils.{Authenticator, ResponseHandler}
 import com.typesafe.config.Config
@@ -26,19 +27,15 @@ class GetCharactersEndpoint(implicit as: ActorSystem, mat: Materializer, conf: C
         HttpRequest(uri =
           url.withRawQueryString(s"limit=$limit&offset=$offset&apikey=$apiKey&hash=$hash&ts=$stamp"))
 
-      def task(last: Either[ErrorBase, CharacterResponse]): ResponseType[CharacterResponse] = for {
-        next <- buildCharacterList(offset + limit, last.toOption.map(_.total))
-      } yield for {
-        l <- last
-        n <- next
-      } yield n.copy(characters = n.characters ++ l.characters)
+      def task(lastCall: CharacterResponse): ResponseType[CharacterResponse] = for {
+        next <- buildCharacterList(offset + limit, Some(lastCall.total))
+      } yield next.copy(characters = next.characters ++ lastCall.characters)
 
-      def makeCall = {
-        sendLoggedRequest(req).as[CharacterResponse].flatMap { response =>
-          if (response.isRight) {
-            task(response)
-          } else response
-        }
+      def makeCall: ResponseType[CharacterResponse] = {
+        for {
+          response <- sendLoggedRequest(req).as[CharacterResponse]
+          fin <- task(response)
+        } yield fin
       }
 
       total match {
@@ -54,6 +51,8 @@ class GetCharactersEndpoint(implicit as: ActorSystem, mat: Materializer, conf: C
       }
     }
 
-    buildCharacterList().map(_.map(_.characters.map(_.id)))
+    for {
+      chr <- buildCharacterList()
+    } yield chr.characters.map(_.id)
   }
 }
