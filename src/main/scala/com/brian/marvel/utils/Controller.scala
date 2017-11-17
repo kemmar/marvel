@@ -1,8 +1,5 @@
 package com.brian.marvel.utils
 
-import javax.xml.parsers.SAXParser
-
-import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.marshalling.{ToEntityMarshaller, ToResponseMarshaller}
 import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 import akka.http.scaladsl.server.Directives._
@@ -19,12 +16,12 @@ trait Controller extends PlayJsonSupport{
 
   def completion[T: ToResponseMarshaller](resp: => ResponseType[T], statusCode: StatusCode = StatusCodes.OK)(implicit mt: ToEntityMarshaller[T]): StandardRoute = {
     val comp = resp.value.map {
-      case Right(Some(rd: RedirectResponse)) => redirect(rd.url, StatusCodes.Found)
       case Right(v) => complete((statusCode, v))
       case Left(serviceError: ServiceError) =>
         complete((StatusCode.int2StatusCode(serviceError.statusCode), serviceError.toStandardError))
       case Left(error) => complete((StatusCodes.UnprocessableEntity, error))
     }
+
     //todo: extract timeout
     Await.result(comp, Duration(180, SECONDS))
   }

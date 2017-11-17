@@ -15,8 +15,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.5.4",
   "de.heikoseeberger" % "akka-http-play-json_2.12" % "1.18.1",
   "org.typelevel" % "cats-core_2.12" % "0.9.0",
-  "com.typesafe.akka" %% "akka-http-xml" % "10.0.10",
-  "org.scala-lang.modules" % "scala-xml_2.12" % "1.0.6",
   "com.github.tomakehurst" % "wiremock" % "2.6.0" % "test",
   "org.scalatest" %% "scalatest" % "3.0.4" % "test",
   "com.typesafe.akka" %% "akka-http-testkit" % "10.0.10" % "test"

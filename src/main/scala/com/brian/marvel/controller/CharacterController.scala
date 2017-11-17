@@ -23,7 +23,7 @@ class CharacterController(getCharactersEndpoint: GetCharactersEndpoint, getChara
   lazy val route: Route = pathPrefix("characters") {
     powers ~
     path(Segment) { characterId =>
-        completion(getCharacterEndpoint.getCharacter(characterId))
+        completion(for(character <- getCharacterEndpoint.getCharacter(characterId)) yield character.copy(wiki = None))
     } ~
       pathEnd {
       completion(getCharactersEndpoint.getCharacters)

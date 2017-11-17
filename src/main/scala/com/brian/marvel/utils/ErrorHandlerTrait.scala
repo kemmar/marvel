@@ -2,13 +2,13 @@ package com.brian.marvel.utils
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{Rejection, RejectionHandler}
+import akka.http.scaladsl.server.{ExceptionHandler, Rejection, RejectionHandler}
 import com.brian.marvel.domain.ErrorObj
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 
-trait RejectionHandlerTrait extends PlayJsonSupport {
+trait ErrorHandlerTrait extends PlayJsonSupport {
   // todo: add more rejection handling
-  implicit def myRejectionHandler =
+   def myRejectionHandler =
     RejectionHandler.newBuilder()
       .handleAll[Rejection] { _ =>
       complete((StatusCodes.UnprocessableEntity, ErrorObj("", "unhandled rejection")))
@@ -18,4 +18,12 @@ trait RejectionHandlerTrait extends PlayJsonSupport {
         }
       }
       .result()
+
+  val myExceptionHandler = ExceptionHandler {
+    case e: Throwable =>
+      extractUri { uri =>
+        println(s"Request to $uri could not be handled normally")
+        complete((StatusCodes.ServiceUnavailable, ErrorObj("unhandled.error", e.getMessage)))
+      }
+  }
 }
