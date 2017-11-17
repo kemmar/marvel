@@ -2,7 +2,7 @@ package com.brian.marvel.controller.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 
-object MarvelStubs extends MockServer(port = 8090, securePort = Some(8490)) {
+object GoogleTranslateStubs extends MockServer(port = 8090, securePort = Some(8490)) {
 
   def returnSuccessfulCharacters = {
     switchToMe()
@@ -11,24 +11,6 @@ object MarvelStubs extends MockServer(port = 8090, securePort = Some(8490)) {
         .withStatus(200)
         .withHeader("Content-Type", "application/json")
         .withBodyFile("/stubs/exampleResponse.json")))
-  }
-
-  def returnSuccessfulCharacter(charId: String) = {
-    switchToMe()
-    stubFor(get(urlPathEqualTo(s"/v1/public/characters/$charId"))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withHeader("Content-Type", "application/json")
-        .withBodyFile("/stubs/exampleCharacterResponse.json")))
-  }
-
-  def returnSuccessfulWiki(charId: String) = {
-    switchToMe()
-    stubFor(get(urlPathEqualTo(s"/$charId"))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withHeader("Content-Type", "text/html")
-        .withBodyFile("/stubs/CharactorBio.html")))
   }
 
   def failWithError(code: String, message: String, statusCode: Int = 400) = {

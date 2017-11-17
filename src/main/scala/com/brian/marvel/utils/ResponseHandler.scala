@@ -6,14 +6,15 @@ import akka.http.scaladsl.model.StatusCodes.ClientError
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
-import com.brian.marvel.domain.{ErrorBase, ErrorObj, ServiceError}
+import cats.data.EitherT
+import com.brian.marvel.domain.{ErrorBase, ServiceError}
 import com.brian.marvel.service.ErrorConstants
 import com.brian.marvel.utils.ResponseHandler._
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
-import cats.data.EitherT
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 trait ResponseHandler extends PlayJsonSupport {
 
@@ -27,22 +28,34 @@ trait ResponseHandler extends PlayJsonSupport {
 
   implicit class UnmarshalResponse(resp: Future[HttpResponse]) {
 
-    def as[T](implicit um: Unmarshaller[HttpResponse, T], mat: Materializer): ResponseType[T] = resp.flatMap { res =>
-        for {
-         value <- Unmarshal(res).to[T]
-        } yield Right(value)
+    def as[T, E <: ErrorBase](implicit um: Unmarshaller[HttpResponse, T], umErr: Unmarshaller[HttpResponse, E], mat: Materializer): ResponseType[T] = resp.flatMap { res =>
+
+      val f = for {
+        value <- Unmarshal(res).to[T]
+      } yield Right(value)
+
+      f.onComplete {
+        case Success(s) => s
+        case Failure(_) => defaultErrorHandler(umErr, mat).apply(res).map(Left(_))
+      }
+
+      f
     }
   }
 
-  import com.brian.marvel.utils.ResponseHandler._
-  private def defaultErrorHandler[T](implicit um: Unmarshaller[HttpResponse, T], mat: Materializer): PartialFunction[HttpResponse, ResponseType[T]] = errorHandler orElse {
-    case resp: HttpResponse => resp.status match {
-      case ClientError(_) => Unmarshal(resp).to[ErrorObj].map(err => Left(ServiceError(err.code, err.message, resp.status.intValue())))
-      case _ => Left(ErrorConstants.ServiceError)
+  private def defaultErrorHandler[E <: ErrorBase](implicit umErr: Unmarshaller[HttpResponse, E], mat: Materializer): PartialFunction[HttpResponse, Future[ServiceError]] = errorHandler orElse {
+    case resp: HttpResponse => {
+      val marshalled = Unmarshal(resp).to[E].map(err => ServiceError(err.code, err.message, resp.status.intValue()))
+
+      marshalled.onComplete {
+        case Success(s) => s
+        case Failure(_) => ErrorConstants.ServiceErrorConstant
+      }
+      marshalled
     }
   }
 
-  protected def errorHandler[T](implicit um: Unmarshaller[HttpResponse, T], mat: Materializer): PartialFunction[HttpResponse, ResponseType[T]] = PartialFunction.empty[HttpResponse, ResponseType[T]]
+  protected def errorHandler[E <: ErrorBase](implicit umErr: Unmarshaller[HttpResponse, E], mat: Materializer): PartialFunction[HttpResponse, Future[ServiceError]] = PartialFunction.empty[HttpResponse, Future[ServiceError]]
 }
 
 object ResponseHandler {
@@ -50,7 +63,7 @@ object ResponseHandler {
 
   implicit def fromFuture[A](fa: Future[Either[ErrorBase, A]]): ResponseType[A] = EitherT(fa)
 
-  implicit def fromEither[A](xor: Either[ErrorBase, A]): ResponseType[A] = fromFuture(Future.successful(xor))
+  implicit def fromEither[A](either: Either[ErrorBase, A]): ResponseType[A] = fromFuture(Future.successful(either))
 
   implicit def fromA[A](a: A): EitherT[Future, ErrorBase, A] = fromEither(Right(a))
 

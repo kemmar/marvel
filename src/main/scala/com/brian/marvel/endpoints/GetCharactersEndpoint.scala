@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{HttpRequest, Uri}
 import akka.stream.Materializer
 import cats.implicits._
-import com.brian.marvel.domain.{CharacterResponse, MarvelCharacter}
+import com.brian.marvel.domain.{CharacterResponse, ServiceError}
 import com.brian.marvel.utils.ResponseHandler._
 import com.brian.marvel.utils.{Authenticator, ResponseHandler}
 import com.typesafe.config.Config
@@ -22,37 +22,38 @@ class GetCharactersEndpoint(implicit as: ActorSystem, mat: Materializer, conf: C
 
   def getCharacters: ResponseType[Seq[Int]] = {
 
-    def buildCharacterList(offset: Int = 0, total: Option[Int] = None): ResponseType[CharacterResponse] = {
-      val req =
-        HttpRequest(uri =
-          url.withRawQueryString(s"limit=$limit&offset=$offset&apikey=$apiKey&hash=$hash&ts=$stamp"))
+    def numToChunks(position: Int, chunk: Int, total: Int): Seq[Int] = {
+      val chunked = position + chunk
 
-      def task(lastCall: CharacterResponse): ResponseType[CharacterResponse] = for {
-        next <- buildCharacterList(offset + limit, Some(lastCall.total))
-      } yield next.copy(characters = next.characters ++ lastCall.characters)
+      if (chunked < total) position +: numToChunks(chunked, chunk, total)
+      else Seq(position)
+    }
 
-      def makeCall: ResponseType[CharacterResponse] = {
+    def req(offset: Int) =
+      HttpRequest(uri =
+        url.withRawQueryString(s"limit=$limit&offset=$offset&apikey=$apiKey&hash=$hash&ts=$stamp"))
+
+    def makeCall: ResponseType[CharacterResponse] = sendLoggedRequest(req(0)).as[CharacterResponse, ServiceError]
+
+    def makeBatchCall(cr: CharacterResponse): ResponseType[CharacterResponse] = {
+
+      val seqFutures: Seq[ResponseType[CharacterResponse]] =
+        numToChunks(limit, limit, cr.total).map { start =>
+          sendLoggedRequest(req(start)).as[CharacterResponse, ServiceError]
+        }
+
+      seqFutures.reduce { (f, a) =>
         for {
-          response <- sendLoggedRequest(req).as[CharacterResponse]
-          fin <- task(response)
-        } yield fin
-      }
-
-      total match {
-        case Some(total) => {
-          if ((offset + limit) <= total) {
-            makeCall
-          }
-          else Right(CharacterResponse(offset + limit, total, Seq.empty[MarvelCharacter]))
-        }
-        case None => {
-          makeCall
-        }
+          x <- f
+          y <- a
+        } yield x.copy(characters = x.characters ++ y.characters)
       }
     }
 
     for {
-      chr <- buildCharacterList()
-    } yield chr.characters.map(_.id)
+      cr <- makeCall
+      bCr <- makeBatchCall(cr)
+    } yield bCr.characters.map(_.id)
   }
+
 }

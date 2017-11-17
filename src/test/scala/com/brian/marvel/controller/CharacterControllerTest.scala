@@ -34,13 +34,14 @@ class CharacterControllerTest extends TestCommons {
           "path" -> "http://i.annihil.us/u/prod/marvel/i/mg/c/e0/535fecbbb9784",
           "extension" -> "jpg"
         ),
-        "wiki" -> "http://marvel.com/universe/3-D_Man_(Chandler)?utm_campaign=apiRef&utm_source=18559d0f7ebe7a297ce0cd5dd388417f"
+        "wiki" -> "http://localhost:8090/1011334"
       )
     }
   }
 
   it should "return the characters wiki" in {
     MarvelStubs.returnSuccessfulCharacter("1011334")
+    MarvelStubs.returnSuccessfulWiki("1011334")
 
     Get("/characters/1011334/powers") ~> routes ~> check {
       responseAs[JsValue] shouldEqual obj(
@@ -59,15 +60,16 @@ class CharacterControllerTest extends TestCommons {
             |estimated to be superhuman, namely roughly triple that of a human in peak physical
             |condition. He could also sense"""
       )
-      status shouldBe StatusCodes.Found
+      status shouldBe StatusCodes.OK
     }
   }
 
   it should "return the characters wiki in given language" in {
     MarvelStubs.returnSuccessfulCharacter("1011334")
+    MarvelStubs.returnSuccessfulWiki("1011334")
 
     Get("/characters/1011334/powers?language=fr") ~> routes ~> check {
-      status shouldBe StatusCodes.Found
+      status shouldBe StatusCodes.OK
       responseAs[JsValue] shouldEqual obj(
         "language" -> "fr",
         "powers" ->
