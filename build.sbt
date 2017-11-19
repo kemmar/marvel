@@ -2,11 +2,9 @@ name := "marvel"
 
 version := "1.0"
 
-scalaVersion := "2.12.4"
+scalaVersion in ThisBuild := "2.12.4"
 
 mainClass in run := Some("com.brian.marvel.Application")
-
-resolvers += "Artima Maven Repository" at "http://repo.artima.com/releases"
 
 libraryDependencies ++= Seq(
   "com.github.swagger-akka-http" % "swagger-akka-http_2.12" % "0.11.0",

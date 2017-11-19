@@ -5,6 +5,13 @@ http://www.scala-sbt.org/1.0/docs/Setup.html
 
 ## Run Application
 
+make file global.sbt in ~/.sbt/0.13/global.sbt
+with content
+
+```
+addSbtPlugin("com.artima.supersafe" % "sbtplugin" % "1.1.2")
+```
+
 In command line in folder path type 
 ```
 sbt clean run \
@@ -21,7 +28,9 @@ sbt clean run \
   
 JDK: Java(8) preferable
 
-SBT
+SBT: 13.*
+
+scala: 2.12.*
 
 ## Issues
 
