@@ -65,18 +65,18 @@ class CharacterControllerTest extends TestCommons {
                                               |}""".stripMargin)
     }
   }
-//
-//  it should "handle errors " in {
-//    val error = "something has gone wrong"
-//    MarvelStubs.failWithError(error, error)
-//
-//    Get("/characters") ~> routes ~> check {
-//      status shouldBe StatusCodes.BadRequest
-//      responseAs[JsValue].toString shouldEqual obj(
-//        "code" -> error,
-//        "message" -> error
-//      ).toString
-//    }
-//  }
+
+  it should "handle errors " in {
+    val error = "something has gone wrong"
+    MarvelStubs.failWithError(error, error)
+
+    Get("/characters") ~> routes ~> check {
+      status shouldBe StatusCodes.BadRequest
+      responseAs[JsValue].toString shouldEqual obj(
+        "code" -> error,
+        "message" -> error
+      ).toString
+    }
+  }
 
 }

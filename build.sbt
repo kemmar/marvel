@@ -2,7 +2,7 @@ name := "marvel"
 
 version := "1.0"
 
-scalaVersion in ThisBuild := "2.12.4"
+scalaVersion := "2.12.4"
 
 mainClass in run := Some("com.brian.marvel.Application")
 
