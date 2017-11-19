@@ -9,7 +9,6 @@ mainClass in run := Some("com.brian.marvel.Application")
 libraryDependencies ++= Seq(
   "com.github.swagger-akka-http" % "swagger-akka-http_2.12" % "0.11.0",
   "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.21",
-  "org.scalactic" %% "scalactic" % "3.0.4",
   "com.typesafe.akka" %% "akka-http" % "10.0.10",
   "com.typesafe.akka" %% "akka-stream" % "2.5.4",
   "com.typesafe.akka" %% "akka-actor" % "2.5.4",
