@@ -18,11 +18,11 @@ trait Controller extends PlayJsonSupport{
     val comp = resp.value.map {
       case Right(v) => complete((statusCode, v))
       case Left(serviceError: ServiceError) =>
-        complete((StatusCode.int2StatusCode(serviceError.statusCode), serviceError.toStandardError))
+        complete((StatusCode.int2StatusCode(serviceError.statusCode.getOrElse(422)), serviceError.toStandardError))
       case Left(error) => complete((StatusCodes.UnprocessableEntity, error))
     }
 
     //todo: extract timeout
-    Await.result(comp, Duration(180, SECONDS))
+    Await.result(comp, Duration(30, SECONDS))
   }
 }

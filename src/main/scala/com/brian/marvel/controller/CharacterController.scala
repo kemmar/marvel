@@ -1,17 +1,22 @@
 package com.brian.marvel.controller
 
-import cats.implicits._
+import javax.ws.rs.Path
+
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import cats.implicits._
+import com.brian.marvel.domain.{MarvelCharacter, Powers}
 import com.brian.marvel.endpoints.{GetCharacterEndpoint, GetCharactersEndpoint, GetPowersEndpoint}
 import com.brian.marvel.utils.Controller
-import com.brian.marvel.utils.ResponseHandler._
+import io.swagger.annotations._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+@Api(value = "/characters", produces = "application/json")
+@Path("/characters")
 class CharacterController(getCharactersEndpoint: GetCharactersEndpoint, getCharacterEndpoint: GetCharacterEndpoint, getPowersEndpoint: GetPowersEndpoint) extends Controller {
 
-  lazy val powers = (path(Segment / "powers") & parameter('language ? "en")) { (characterId, language) =>
+  private lazy val powers = (path(Segment / "powers") & parameter('language ? "en")) { (characterId, language) =>
     completion {
       for {
         character <- getCharacterEndpoint.getCharacter(characterId)
@@ -20,13 +25,15 @@ class CharacterController(getCharactersEndpoint: GetCharactersEndpoint, getChara
     }
   }
 
+  private lazy val getCharacter = path(Segment) { characterId =>
+    completion(for (character <- getCharacterEndpoint.getCharacter(characterId)) yield character.copy(wiki = None))
+  }
+
+  private lazy val getCharacters = pathEnd {
+    completion(getCharactersEndpoint.getCharacters)
+  }
+
   lazy val route: Route = pathPrefix("characters") {
-    powers ~
-    path(Segment) { characterId =>
-        completion(for(character <- getCharacterEndpoint.getCharacter(characterId)) yield character.copy(wiki = None))
-    } ~
-      pathEnd {
-      completion(getCharactersEndpoint.getCharacters)
-    }
+    powers ~ getCharacter ~ getCharacters
   }
 }

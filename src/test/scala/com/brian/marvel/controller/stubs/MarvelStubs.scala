@@ -31,7 +31,7 @@ object MarvelStubs extends MockServer(port = 8090, securePort = Some(8490)) {
         .withBodyFile("/stubs/CharactorBio.html")))
   }
 
-  def failWithError(code: String, message: String, statusCode: Int = 400) = {
+  def failWithError(code: Int, message: String, statusCode: Int = 400) = {
     switchToMe()
     stubFor(get(urlPathEqualTo("/v1/public/characters"))
       .willReturn(aResponse()
@@ -39,8 +39,8 @@ object MarvelStubs extends MockServer(port = 8090, securePort = Some(8490)) {
         .withHeader("Content-Type", "application/json")
         .withBody(
           s"""{
-             |    "code": "$code",
-             |    "message": "$message"
+             |    "code": $code,
+             |    "status": "$message"
              |}""".stripMargin)))
   }
 }

@@ -1,14 +1,15 @@
 package com.brian.marvel.service
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import com.brian.marvel.controller.CharacterController
 import com.brian.marvel.endpoints.{GetCharacterEndpoint, GetCharactersEndpoint, GetPowersEndpoint}
+import com.brian.marvel.swagger.Swagger
 import com.brian.marvel.utils.ErrorHandlerTrait
+import com.github.swagger.akka.SwaggerSite
 import com.typesafe.config.ConfigFactory
 
-trait Dependencies extends ErrorHandlerTrait {
+trait Dependencies extends ErrorHandlerTrait with SwaggerSite with Cache {
 
   implicit val config = ConfigFactory.load()
   implicit val system: ActorSystem
@@ -21,6 +22,7 @@ trait Dependencies extends ErrorHandlerTrait {
   lazy val characterController = new CharacterController(getCharactersEndpoint, getCharacterEndpoint, getPowersEndpoint)
 
   lazy val routes = (handleRejections(myRejectionHandler) & handleExceptions(myExceptionHandler)) {
-    characterController.route
+    characterController.route ~ Swagger.routes ~ swaggerSiteRoute
   }
+
 }

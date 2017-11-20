@@ -6,7 +6,6 @@ import java.net.{URL, URLEncoder}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.headers.Accept
 import akka.http.scaladsl.model.{ContentTypes, HttpRequest, Uri}
-import akka.http.scaladsl.server.ContentNegotiator.Alternative.ContentType
 import akka.stream.Materializer
 import cats.implicits._
 import com.brian.marvel.domain._
@@ -35,17 +34,11 @@ class GetPowersEndpoint(implicit as: ActorSystem, mat: Materializer, conf: Confi
   }
 
   private def scrapePowers(url: String): ResponseType[String] = {
+    val cleaner = new HtmlCleaner
+    val rootNode = cleaner.clean(new URL(url))
+    val elements = rootNode.getElementsByAttValue("id", "char-powers-content", true, false)
 
-    def getHeadlinesFromUrl: String = {
-      val cleaner = new HtmlCleaner
-      val props = cleaner.getProperties
-      val rootNode = cleaner.clean(new URL(url))
-      val elements = rootNode.getElementsByAttValue("id", "char-powers-content", true, false)
-
-      elements.map(_.getText.toString).mkString(". ")
-    }
-
-    getHeadlinesFromUrl.asRight
+    elements.map(_.getText.toString).mkString(". ").asRight
   }
 
   def translate(text: String, lang: String): ResponseType[Powers] = {

@@ -27,24 +27,19 @@ trait ResponseHandler extends PlayJsonSupport {
 
   implicit class UnmarshalResponse(resp: Future[HttpResponse]) {
 
-    def as[T, E <: ErrorBase](implicit um: Unmarshaller[HttpResponse, T], umErr: Unmarshaller[HttpResponse, E], mat: Materializer): ResponseType[T] = resp.flatMap { res =>
-
-      val f = for {
-        value <- Unmarshal(res).to[T]
-      } yield Right(value)
-
-      f.onComplete {
-        case Success(s) => s
-        case Failure(_) => defaultErrorHandler(umErr, mat).apply(res).map(Left(_))
+    def as[T, E <: ErrorBase](implicit um: Unmarshaller[HttpResponse, T], umErr: Unmarshaller[HttpResponse, E], mat: Materializer): ResponseType[T] =
+      resp.flatMap {
+        case r if r.status.isSuccess() => Unmarshal(r).to[T].map(Right(_))
+        case r => defaultErrorHandler.apply(r).map(Left(_))
       }
-
-      f
-    }
   }
 
   private def defaultErrorHandler[E <: ErrorBase](implicit umErr: Unmarshaller[HttpResponse, E], mat: Materializer): PartialFunction[HttpResponse, Future[ServiceError]] = errorHandler orElse {
     case resp: HttpResponse => {
-      val marshalled = Unmarshal(resp).to[E].map(err => ServiceError(err.code, err.message, resp.status.intValue()))
+      val marshalled =
+        Unmarshal(resp)
+          .to[E]
+          .map(err => ServiceError(err.code, err.message, Some(resp.status.intValue())))
 
       marshalled.onComplete {
         case Success(s) => s

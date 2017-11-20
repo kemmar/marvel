@@ -7,6 +7,8 @@ scalaVersion := "2.12.4"
 mainClass in run := Some("com.brian.marvel.Application")
 
 libraryDependencies ++= Seq(
+  "com.github.cb372" %% "scalacache-guava" % "0.21.0",
+  "co.pragmati" %% "swagger-ui-akka-http" % "1.1.0",
   "com.github.swagger-akka-http" % "swagger-akka-http_2.12" % "0.11.0",
   "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.21",
   "com.typesafe.akka" %% "akka-http" % "10.0.10",

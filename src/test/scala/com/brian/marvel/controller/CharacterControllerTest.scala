@@ -11,6 +11,7 @@ class CharacterControllerTest extends TestCommons {
   before {
     MarvelStubs.restart
     GoogleTranslateStubs.restart
+    getCharactersEndpoint.myCache.invalidateAll()
   }
 
   it should "return a list of character IDs" in {
@@ -45,10 +46,11 @@ class CharacterControllerTest extends TestCommons {
 
     Get("/characters/1011334/powers") ~> routes ~> check {
       status shouldBe StatusCodes.OK
-      responseAs[JsValue] shouldEqual parse("""{
-                                              |    "language": "en",
-                                              |    "powers": "Amazing"
-                                              |}""".stripMargin)
+      responseAs[JsValue] shouldEqual parse(
+        """{
+          |    "language": "en",
+          |    "powers": "Amazing"
+          |}""".stripMargin)
     }
   }
 
@@ -59,21 +61,23 @@ class CharacterControllerTest extends TestCommons {
 
     Get("/characters/1011334/powers?language=fr") ~> routes ~> check {
       status shouldBe StatusCodes.OK
-      responseAs[JsValue] shouldEqual parse("""{
-                                              |    "language": "fr",
-                                              |    "powers": "Incroyable"
-                                              |}""".stripMargin)
+      responseAs[JsValue] shouldEqual parse(
+        """{
+          |    "language": "fr",
+          |    "powers": "Incroyable"
+          |}""".stripMargin)
     }
   }
 
   it should "handle errors " in {
+    val errorCode = 123
     val error = "something has gone wrong"
-    MarvelStubs.failWithError(error, error)
+    MarvelStubs.failWithError(errorCode, error)
 
     Get("/characters") ~> routes ~> check {
       status shouldBe StatusCodes.BadRequest
       responseAs[JsValue].toString shouldEqual obj(
-        "code" -> error,
+        "code" -> s"$errorCode",
         "message" -> error
       ).toString
     }
