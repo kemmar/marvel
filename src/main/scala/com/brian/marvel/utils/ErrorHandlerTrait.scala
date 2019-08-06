@@ -28,6 +28,7 @@ trait ErrorHandlerTrait extends PlayJsonSupport {
       extractUri { uri =>
         println(s"Request to $uri could not be handled normally")
         println(s"Error: ${e.getCause}")
+        e.printStackTrace()
         complete((StatusCodes.ServiceUnavailable, ErrorObj("unhandled.error", e.getMessage)))
       }
   }
