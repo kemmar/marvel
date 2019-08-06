@@ -1,6 +1,6 @@
 package com.brian.marvel.service
 
-import java.io.{File, FileOutputStream}
+import java.io.{File, FileInputStream, FileOutputStream, InputStream}
 import java.net.URL
 
 import akka.NotUsed
@@ -17,6 +17,10 @@ import scala.sys.process._
 
 object EpubService {
 
+  private def getResource(path: String): InputStream = new FileInputStream(new File(path))
+
+  private def getResource(path: String, href: String): Resource = new Resource(getResource(path), href)
+
   def bookFlow(book: Book): Flow[WuxiaPage, File, NotUsed] = Flow.fromFunction[WuxiaPage, File] { page =>
 
     val dir = new File(s"${book.getTitle}")
@@ -26,19 +30,19 @@ object EpubService {
 
     s"echo <html><title>${page.title}</title><body>${page.text}</body></html>" #> file !!
 
+    file.deleteOnExit()
     file
   }
 
   def createBook(novel: WuxiaNovel)(implicit ec: ExecutionContext, mat: Materializer): Future[HttpResponse] = {
     val book = new Book()
 
-    val file = new File(s"${novel.title}.jpg")
+    val coverPic = new File(s"${novel.title}.jpg")
 
-    new URL(s"${novel.image}") #> file !!
+    new URL(s"${novel.image}") #> coverPic !!
 
-    book.setCoverImage(new Resource(file.getPath))
+    book.setCoverImage(getResource(coverPic.getPath, coverPic.getName))
 
-    book.addResource()
     val meta = book.getMetadata
 
     meta.addTitle(novel.title)
@@ -51,8 +55,10 @@ object EpubService {
 
       files
         .foreach { f =>
-          book
-            .addSection(f.getName.replace(".htm", ""), new Resource(f.getPath))
+          book.addSection(
+            f.getName,
+            getResource(f.getAbsolutePath, s"/pages/${f.getName}")
+          )
 
           f.delete()
         }

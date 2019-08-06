@@ -81,7 +81,7 @@ object WuxiaService {
       title = title,
       description = description,
       image = image,
-      pages = streamPages(Some(s"$rootLink/chapter-1")).take(1)
+      pages = streamPages(Some(s"$rootLink/chapter-1")).take(250)
     )
 
   }

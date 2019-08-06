@@ -2,7 +2,6 @@ import sbt.ConflictManager
 
 import sbt._
 import Keys._
-import sbtassembly.AssemblyKeys._
 
 name := "marvel"
 
