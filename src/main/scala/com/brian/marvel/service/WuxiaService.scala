@@ -2,21 +2,40 @@ package com.brian.marvel.service
 
 import java.net.URL
 
-import com.brian.marvel.domain.{WuxiaNovel, WuxiaPage}
+import com.brian.marvel.domain.{LinkReference, WuxiaNovel, WuxiaPage}
 import org.htmlcleaner.HtmlCleaner
 
 import scala.collection.JavaConverters._
+import scala.concurrent.{ExecutionContext, Future, blocking}
 
 
 object WuxiaService {
 
-  private val cleaner = new HtmlCleaner()
+  def findPages(link: String): LinkReference = {
+    val node = new HtmlCleaner().clean(new URL(link))
+
+    LinkReference {
+      node
+        .findElementByAttValue(
+          "class",
+          "main version-chap",
+          true,
+          true)
+        .getAllElements(true)
+        .map(_.getAttributes
+          .asScala
+          .toMap
+          .get("href"))
+        .toSeq
+        .flatten
+        .sortBy(_.split("-").last.toInt)
+        .take(20)
+    }
+  }
 
   private def readLinkToWuxiaPage: String => WuxiaPage = { link: String =>
     println(link)
-
-    val node = cleaner.clean(new URL(link))
-
+    val node = new HtmlCleaner().clean(new URL(link))
 
     val text = node
       .findElementByAttValue(
@@ -40,26 +59,17 @@ object WuxiaService {
     val title = text
       .head
 
-    val nextLink: Option[String] = Option(node
-      .findElementByAttValue(
-        "class",
-        "btn next_page",
-        true,
-        true)).flatMap(_.getAttributes.asScala.toMap.get("href"))
-
-    WuxiaPage(title, text.map(x => s"<p> $x </p>").dropRight(1).mkString, nextLink)
+    WuxiaPage(title, text.map(x => s"<p> $x </p>").dropRight(1).mkString, link.split("-").last.toInt)
   }
 
-  def streamPages(linkOpt: Option[String], paged: Stream[WuxiaPage] = Stream.empty): Stream[WuxiaPage] = linkOpt match {
-    case None => paged
-    case Some(link) => {
-      val nextPage = readLinkToWuxiaPage(link)
-      nextPage #:: streamPages(nextPage.nextLink, paged :+ nextPage)
+  def readPageFuture(str: String)(implicit ec: ExecutionContext) = Future {
+    blocking {
+      readLinkToWuxiaPage(str)
     }
   }
 
-  def buildNovelInformation(homePageUrl: String) = {
-    val node = cleaner.clean(new URL(homePageUrl))
+  def buildNovelInformation(homePageUrl: String): WuxiaNovel = {
+    val node = new HtmlCleaner().clean(new URL(homePageUrl))
 
     val title = node
       .findElementByAttValue("property", "og:title", true, true)
@@ -81,7 +91,7 @@ object WuxiaService {
       title = title,
       description = description,
       image = image,
-      pages = streamPages(Some(s"$rootLink/chapter-1")).take(250)
+      pages = findPages(homePageUrl)
     )
 
   }

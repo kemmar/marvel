@@ -1,47 +1,61 @@
 package com.brian.marvel.service
 
-import java.io.{File, FileInputStream, FileOutputStream, InputStream}
+import java.io.{File, FileInputStream, FileOutputStream}
 import java.net.URL
 
 import akka.NotUsed
 import akka.http.scaladsl.model.ContentTypes.`application/octet-stream`
 import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Flow, Source}
 import com.brian.marvel.domain.{WuxiaNovel, WuxiaPage}
 import nl.siegmann.epublib.domain.{Book, Resource}
 import nl.siegmann.epublib.epub.EpubWriter
+import nl.siegmann.epublib.service.MediatypeService
+import nl.siegmann.epublib.util.IOUtil
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.sys.process._
 
 object EpubService {
 
-  private def getResource(path: String): InputStream = new FileInputStream(new File(path))
+  private def getResource(path: String): Array[Byte] =
+    IOUtil.toByteArray(new FileInputStream(new File(path)))
 
-  private def getResource(path: String, href: String): Resource = new Resource(getResource(path), href)
+  private def getResource(page: String, path: String, href: String): Resource =
+    new Resource(page, getResource(path), href, MediatypeService.determineMediaType(href))
 
-  def bookFlow(book: Book): Flow[WuxiaPage, File, NotUsed] = Flow.fromFunction[WuxiaPage, File] { page =>
+  def bookFlow(book: Book): Flow[WuxiaPage, (File, Int), NotUsed] =
+    Flow.fromFunction[WuxiaPage, (File, Int)] { page =>
+      val dir = new File(s"${book.getTitle}")
+      val file = new File(s"${book.getTitle}/${page.title}.htm")
 
-    val dir = new File(s"${book.getTitle}")
-    val file = new File(s"${book.getTitle}/${page.title}.htm")
-    dir.mkdir()
-    file.createNewFile()
+      if (!dir.exists()) {
+        dir.mkdir()
+      }
 
-    s"echo <html><title>${page.title}</title><body>${page.text}</body></html>" #> file !!
+      dir.deleteOnExit()
+      if (!file.exists()) {
+        file.createNewFile()
+      }
 
-    file.deleteOnExit()
-    file
-  }
+      s"echo <html><title>${page.title}</title><body>${page.text}</body></html>" #> file !!
 
-  def createBook(novel: WuxiaNovel)(implicit ec: ExecutionContext, mat: Materializer): Future[HttpResponse] = {
+      file.deleteOnExit()
+      (file, page.page)
+    }
+
+  def createBook(novel: WuxiaNovel)(implicit ec: ExecutionContext,
+                                    mat: Materializer): Future[HttpResponse] = {
     val book = new Book()
 
     val coverPic = new File(s"${novel.title}.jpg")
 
     new URL(s"${novel.image}") #> coverPic !!
 
-    book.setCoverImage(getResource(coverPic.getPath, coverPic.getName))
+    val pic = getResource(null, coverPic.getPath, coverPic.getName)
+
+    book.setCoverImage(pic)
 
     val meta = book.getMetadata
 
@@ -49,32 +63,35 @@ object EpubService {
     meta.addDescription(novel.description)
 
     Source
-      .fromIterator(() => novel.pages.iterator)
+      .fromIterator(() => novel.pages.href.iterator)
+      .mapAsync(8)(WuxiaService.readPageFuture(_))
       .via(bookFlow(book))
-      .runWith(Sink.seq[File]).map { files =>
+      .runFold(Seq.empty[(File, Int)])(_ :+ _)
+      .map { files =>
 
-      files
-        .foreach { f =>
-          book.addSection(
-            f.getName,
-            getResource(f.getAbsolutePath, s"/pages/${f.getName}")
-          )
+        files
+          .sortBy(_._2)
+          .map {
+            case (f, page) =>
 
-          f.delete()
-        }
+              book.addSection(
+                f.getName,
+                getResource(page.toString, f.getAbsolutePath, s"/pages/${f.getName}")
+              )
+          }
 
+      } map { _ =>
       val output = new FileOutputStream(s"${novel.title}.epub")
       val epubWriter = new EpubWriter
 
       epubWriter.write(book, output)
+      println("finished writing book")
 
       val file = new File(s"${novel.title}.epub")
 
-      HttpResponse(entity = HttpEntity.fromPath(`application/octet-stream`, file.toPath))
-
+      HttpResponse(
+        entity = HttpEntity.fromPath(`application/octet-stream`, file.toPath))
     }
-
-
   }
 
 }
