@@ -56,7 +56,7 @@ class HeightMapGeneratorService()(implicit mat: Materializer) {
           0,
           totalBytes.abs,
           delta.abs,
-          totalBytes < 0
+          totalBytes >= 0
         )
       }.runFold(Seq.empty[BinaryEntity])(_ :+ _)
   }
