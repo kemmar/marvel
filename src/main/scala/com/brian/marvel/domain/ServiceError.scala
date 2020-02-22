@@ -15,13 +15,7 @@ object ServiceError {
       (JsPath \ 'statusCode).readNullable[Int]
     ) (ServiceError.apply _)
 
-  val readsMarvelServiceError: Reads[ServiceError] = (
-    (JsPath \ 'code).read[Int].map(_.toString) and
-      (JsPath \ 'status).read[String] and
-      (JsPath \ 'statusCode).readNullable[Int]
-    ) (ServiceError.apply _)
-
   implicit val formatServiceError =
     Json.format[ServiceError]
-      .orElse(readsServiceError orElse readsMarvelServiceError)
+      .orElse(readsServiceError)
 }

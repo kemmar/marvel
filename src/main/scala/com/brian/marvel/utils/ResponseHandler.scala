@@ -7,13 +7,14 @@ import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import cats.data.EitherT
 import com.brian.marvel.domain.{ErrorBase, ServiceError}
-import com.brian.marvel.service.ErrorConstants
+import com.brian.marvel.http.ErrorConstants
 import com.brian.marvel.utils.ResponseHandler._
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 trait ResponseHandler extends PlayJsonSupport {
 
@@ -29,7 +30,12 @@ trait ResponseHandler extends PlayJsonSupport {
 
     def as[T, E <: ErrorBase](implicit um: Unmarshaller[HttpResponse, T], umErr: Unmarshaller[HttpResponse, E], mat: Materializer): ResponseType[T] =
       resp.flatMap {
-        case r if r.status.isSuccess() => Unmarshal(r).to[T].map(Right(_))
+        case r if r.status.isSuccess() => Try {
+          Unmarshal(r).to[T].map(Right(_))
+        }.toOption match {
+          case Some(response) => response
+          case None => defaultErrorHandler.apply(r).map(Left(_))
+        }
         case r => defaultErrorHandler.apply(r).map(Left(_))
       }
   }
@@ -40,6 +46,10 @@ trait ResponseHandler extends PlayJsonSupport {
         Unmarshal(resp)
           .to[E]
           .map(err => ServiceError(err.code, err.message, Some(resp.status.intValue())))
+          .recover {
+            case NonFatal(e: Throwable) =>
+              ServiceError("parsing error", e.getMessage)
+          }
 
       marshalled.onComplete {
         case Success(s) => s

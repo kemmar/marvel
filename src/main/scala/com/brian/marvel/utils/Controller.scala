@@ -12,7 +12,7 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, _}
 
-trait Controller extends PlayJsonSupport{
+trait Controller extends PlayJsonSupport {
 
   def completion[T: ToResponseMarshaller](resp: => ResponseType[T], statusCode: StatusCode = StatusCodes.OK)(implicit mt: ToEntityMarshaller[T]): StandardRoute = {
     val comp = resp.value.map {

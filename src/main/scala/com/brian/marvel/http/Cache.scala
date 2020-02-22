@@ -1,4 +1,4 @@
-package com.brian.marvel.service
+package com.brian.marvel.http
 
 import java.util.concurrent.TimeUnit
 
