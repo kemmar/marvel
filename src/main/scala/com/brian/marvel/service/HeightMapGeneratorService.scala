@@ -1,20 +1,24 @@
-package com.brian.marvel.controller
+package com.brian.marvel.service
 
 import java.awt.image.BufferedImage
 import java.io.File
 import java.util.UUID
 import java.awt.Color
+import java.nio.ByteBuffer
 
+import akka.Done
 import akka.http.javadsl.server.directives.FileInfo
-import akka.stream.scaladsl.Source
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import com.brian.marvel.db.entity.BinaryEntity
 import javax.imageio.ImageIO
 
+import scala.collection.immutable
+import scala.concurrent.Future
 import scala.util.Try
 
-
-class HeightMapGenerator {
+class HeightMapGeneratorService()(implicit mat: Materializer) {
 
   def genHeightMap(width: Int, height: Int): Try[File] = {
     val bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
@@ -40,16 +44,20 @@ class HeightMapGenerator {
     }
   }
 
-  def fromFileUpload(metadata: FileInfo, bytesSource: Source[ByteString, Any]): File = {
+  def fromFileUpload(metadata: FileInfo, bytesSource: Source[ByteString, Any]): Future[Seq[BinaryEntity]] = {
     bytesSource
-      .grouped(64)
       .map { bytes =>
-        val grouped = bytes.map(_.head.toInt).grouped(16)
+        val byteToInt = ByteBuffer.wrap(bytes.toArray).getInt
+        val totalBytes = byteToInt / 255
+
+        val delta = byteToInt - (totalBytes * 255)
 
         BinaryEntity(
           0,
-          grouped.h
+          totalBytes.abs,
+          delta.abs,
+          totalBytes < 0
         )
-      }
+      }.runFold(Seq.empty[BinaryEntity])(_ :+ _)
   }
 }

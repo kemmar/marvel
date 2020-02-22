@@ -2,9 +2,9 @@ package com.brian.marvel.http
 
 import akka.actor.ActorSystem
 import akka.stream.SystemMaterializer
-import com.brian.marvel.controller.{HeightMapGenerator, StockController}
+import com.brian.marvel.controller.StockController
 import com.brian.marvel.endpoints.FinnHubEndpoint
-import com.brian.marvel.service.StockTickerService
+import com.brian.marvel.service.{HeightMapGeneratorService, StockTickerService}
 import com.brian.marvel.utils.ErrorHandlerTrait
 import com.brian.marvel.websocket.FinnHubSocket
 import com.github.swagger.akka.SwaggerSite
@@ -22,7 +22,7 @@ trait Dependencies extends ErrorHandlerTrait with SwaggerSite with Cache {
 
   lazy val tickerService = new StockTickerService(finnHubEndpoint)
 
-  lazy val heightMapGenerator = new HeightMapGenerator()
+  lazy val heightMapGenerator = new HeightMapGeneratorService()
 
   lazy val stockController = new StockController(tickerService, heightMapGenerator)
 

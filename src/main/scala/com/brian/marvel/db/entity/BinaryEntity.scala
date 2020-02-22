@@ -1,9 +1,14 @@
 package com.brian.marvel.db.entity
 
+import play.api.libs.json.Json
+
 case class BinaryEntity(
                        id: Int,
-                       firstGroup: Array[Byte],
-                       secondGroup: Array[Byte],
-                       thirdGroup: Array[Byte],
-                       forthGroup: Array[Byte]
+                       byteX: Int,
+                       byteB: Int,
+                       isPositive: Boolean
                        )
+
+object BinaryEntity {
+  implicit val jsonBinaryEntity = Json.format[BinaryEntity]
+}

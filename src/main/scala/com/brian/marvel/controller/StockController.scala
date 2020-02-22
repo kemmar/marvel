@@ -2,17 +2,14 @@ package com.brian.marvel.controller
 
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.stream.scaladsl.{FileIO, Framing}
-import akka.util.ByteString
 import com.brian.marvel.domain.{HeightMapRequest, SetTickerRequest}
-import com.brian.marvel.service.StockTickerService
+import com.brian.marvel.service.{HeightMapGeneratorService, StockTickerService}
 import com.brian.marvel.utils.Controller
 
-import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
-class StockController(tickerService: StockTickerService, heightMapGenerator: HeightMapGenerator) extends Controller {
+class StockController(tickerService: StockTickerService, heightMapGenerator: HeightMapGeneratorService) extends Controller {
 
   private lazy val getTickers = (get & path("ticker") & pathEnd) {
     completion(tickerService.getActiveTickers)
@@ -38,14 +35,13 @@ class StockController(tickerService: StockTickerService, heightMapGenerator: Hei
   }
 
   private lazy val buildMapRandom = (post & path("height-comp")) {
-
-    fileUpload("file") { case (metadata, byteSource) =>
-      headerValueByName("Content-Length") { fileSize =>
+    withoutSizeLimit {
+      fileUpload("file") { case (metadata, byteSource) =>
 
         val file = heightMapGenerator
           .fromFileUpload(metadata, byteSource)
 
-          complete(fileSize)
+        complete(file)
       }
     }
 

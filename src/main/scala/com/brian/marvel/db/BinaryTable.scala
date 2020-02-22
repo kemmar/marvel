@@ -8,17 +8,15 @@ class BinaryTable[T <: Product](tag: Tag) extends Table[BinaryEntity](tag, "bina
 
   def id = column[Int]("bin_id", O.PrimaryKey, O.AutoInc)
 
-  def firstGroup: Rep[Array[Byte]] = column[Array[Byte]]("first_group")
-  def secondGroup: Rep[Array[Byte]] = column[Array[Byte]]("second_group")
-  def thirdGroup: Rep[Array[Byte]] = column[Array[Byte]]("third_group")
-  def forthGroup: Rep[Array[Byte]] = column[Array[Byte]]("forth_group")
+  def byteX: Rep[Int] = column[Int]("byte_x")
+  def byteB: Rep[Int] = column[Int]("byte_d")
+  def isPositive: Rep[Boolean] = column[Boolean]("is_positive")
 
   override def * : ProvenShape[BinaryEntity] =
     (
       id,
-      firstGroup,
-      secondGroup,
-      thirdGroup,
-      forthGroup
+      byteX,
+      byteB,
+      isPositive
     ) <> ((BinaryEntity.apply _).tupled, BinaryEntity.unapply)
 }
